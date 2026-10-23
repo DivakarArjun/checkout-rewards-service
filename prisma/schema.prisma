@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id           String     @id
+  name         String
+  priceCents   Int
+  inventory    Int
+  cartItems    CartItem[]
+  orderItems   OrderItem[]
+}
+
+model Cart {
+  id        String     @id
+  status    String     @default("open")
+  createdAt DateTime   @default(now())
+  items     CartItem[]
+  order     Order?
+}
+
+model CartItem {
+  cartId    String
+  productId String
+  quantity  Int
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@id([cartId, productId])
+}
+
+model Order {
+  id             String      @id
+  cartId         String      @unique
+  idempotencyKey String      @unique
+  couponCode     String?     @unique
+  grossCents     Int
+  discountCents  Int
+  netCents       Int
+  createdAt      DateTime    @default(now())
+  cart           Cart        @relation(fields: [cartId], references: [id])
+  items          OrderItem[]
+  coupon         Coupon?     @relation(fields: [couponCode], references: [code])
+}
+
+model OrderItem {
+  orderId        String
+  productId      String
+  productName    String
+  unitPriceCents Int
+  quantity       Int
+  lineTotalCents Int
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product        Product @relation(fields: [productId], references: [id])
+
+  @@id([orderId, productId])
+}
+
+model Coupon {
+  code                String   @id
+  milestoneOrderCount Int      @unique
+  percent             Int
+  status              String   @default("available")
+  orderId             String?  @unique
+  createdAt           DateTime @default(now())
+  orders              Order[]
+}
